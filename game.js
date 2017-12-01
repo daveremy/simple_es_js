@@ -4,7 +4,9 @@ class Game {
 
   constructor(createGameCommand) {
     this._events = [];
-    var gameCreated = new GameCreated(createGameCommand.xplayer, createGameCommand.yplayer);
+    var gameCreated = new GameCreated(createGameCommand.id,
+                                      createGameCommand.xplayer,
+                                      createGameCommand.yplayer);
     this._events.push(gameCreated);
   }
 
@@ -15,7 +17,8 @@ class Game {
 };
 
 class GameCreated {
-  constructor(xplayer, yplayer) {
+  constructor(id, xplayer, yplayer) {
+    this.id = id;
     this.xplayer = xplayer;
     this.yplayer = yplayer;
   }
