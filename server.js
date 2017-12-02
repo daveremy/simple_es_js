@@ -1,6 +1,7 @@
 var express = require('express');
 var app = express();
 var bodyParser = require('body-parser');
+
 let Game = require('./game.js'); 
 let Repository = require('./repository.js');
 
@@ -15,7 +16,9 @@ router.get('/', function(req, res) {
 });
 
 var repo = new Repository(console);
-
+// Rest API mapping to commands
+//   * /api/games          post  createGame
+//   * /api/games/:game_id put   placeXorY
 router.route('/games')
   .post(function(req, res) {
      // command to create a new game
@@ -23,6 +26,14 @@ router.route('/games')
      repo.pushEvents(req.body.id, game.getEvents());
      res.json(repo.getEvents(req.body.id));
   });
+
+router.route('/games/:game_id')
+  .put((function(req, res) {
+    // hydrate game
+    var game = repo.hydrate(req.params.game_id);
+    game.placeXorY(req.body);
+    console.log("In PUT!");
+  }));
 
 // register routes
 app.use('/api', router);
