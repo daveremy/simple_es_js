@@ -1,5 +1,4 @@
 'use strict' 
-
 class Repository {
   constructor(console) {
     this._repo = {};
@@ -21,4 +20,15 @@ class Repository {
   }
 }
 
-module.exports = Repository;
+class GameRepository extends Repository {
+  hydrate(id) {
+    var game = new Game();
+    for (var event of this._repo[id]) {
+      // apply each event in history
+      game['apply' + event.constructor.name]();
+    }
+    return game;
+  }
+}
+
+module.exports = GameRepository;
