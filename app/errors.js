@@ -11,7 +11,14 @@ class NotPlayersTurnError extends Error {
   }
 }
 
+class SquareAlreadyClaimedError extends Error {
+  constructor(square) {
+    super("Square: [" + square[0] + ", " + square[1] + "] already claimed.");
+  }
+}
+
 module.exports = {
   RequiredFieldError : RequiredFieldError,
-  NotPlayersTurnError : NotPlayersTurnError
+  NotPlayersTurnError : NotPlayersTurnError,
+  SquareAlreadyClaimedError : SquareAlreadyClaimedError
 }

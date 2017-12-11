@@ -1,5 +1,5 @@
 'use strict'
-let { RequiredFieldError, NotPlayersTurnError } = require('./errors');
+let { RequiredFieldError, NotPlayersTurnError, SquareAlreadyClaimedError } = require('./errors');
 
 class Game {
 
@@ -26,13 +26,19 @@ class Game {
     return this;
   }
 
-  handleClaimSquare(claimSquareCommand) {
-    this.checkRequired([['player', claimSquareCommand.player],
-                        ['square', claimSquareCommand.square]]);
-    if (claimSquareCommand.player != this.nextPlayer) {
-      throw new NotPlayersTurnError(claimSquareCommand.player);
+  handleClaimSquare(claimSquare) {
+    this.checkRequired([['player', claimSquare.player],
+                        ['square', claimSquare.square]]);
+    // assure this is the correct next  player
+    if (claimSquare.player != this.nextPlayer) {
+      throw new NotPlayersTurnError(claimSquare.player);
     }
-    var squareClaimed = new SquareClaimed(claimSquareCommand.player, claimSquareCommand.square);
+    // assure this square isn't already claimed
+    let claimedSquare = this.gameBoard[claimSquare.square[0]][claimSquare.square[1]];
+    if (!(claimedSquare === "Unclaimed")) {
+      throw new SquareAlreadyClaimedError(claimSquare.square);
+    }
+    var squareClaimed = new SquareClaimed(claimSquare.player, claimSquare.square);
     this.registerEvent(squareClaimed);
     return this;
   }
@@ -42,7 +48,9 @@ class Game {
   // Note these methods will be called for rehydration as well
   //  internally (see registerEvent(e)) to set state.
   applyGameCreated(gameCreated) {
-    this.gameBoard = [ [], [], [] ];
+    this.gameBoard = [ ["Unclaimed", "Unclaimed", "Unclaimed"],
+                       ["Unclaimed", "Unclaimed", "Unclaimed"],
+                       ["Unclaimed", "Unclaimed", "Unclaimed"] ];
     this.xplayer = gameCreated.xplayer;
     this.oplayer = gameCreated.oplayer;
     // x goes first
