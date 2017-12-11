@@ -5,6 +5,13 @@ class RequiredFieldError extends Error {
   }
 }
 
+class NotPlayersTurnError extends Error {
+  constructor(player) {
+    super("Player: " + player + " attempted to move when not that player's turn");
+  }
+}
+
 module.exports = {
-  RequiredFieldError : RequiredFieldError
+  RequiredFieldError : RequiredFieldError,
+  NotPlayersTurnError : NotPlayersTurnError
 }

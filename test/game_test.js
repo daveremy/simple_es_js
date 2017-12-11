@@ -1,6 +1,6 @@
 let assert = require('assert');
 let Game = require('../app/game.js');
-let {RequiredFieldError} = require('../app/errors');
+let { RequiredFieldError, NotPlayersTurnError } = require('../app/errors');
 let CreateGameCommand = require('../app/commands/createGame');
 let ClaimSquareCommand = require('../app/commands/claimSquare');
 let CommandHandler = require('../app/commandHandler');
@@ -57,6 +57,18 @@ describe('Game', () => {
       assert.equal('SquareClaimed', event.constructor.name);
       assert.equal(claimSquareCommand.player, event.player);
       assert.equal(claimSquareCommand.square, event.square);
+    })
+    it('should not allow John two consecutive turns', () => {
+      let repo = new GameRepository();
+      var game = new Game().handleCreateGame(new CreateGameCommand('123', 'John', 'Jane'));
+      repo.pushEvents('123', game.getUncommittedEvents());
+      game = repo.hydrate('123');
+      var claimSquareCommand = new ClaimSquareCommand('John', [0, 0]);
+      game.handleClaimSquare(claimSquareCommand);
+      repo.pushEvents('123', game.getUncommittedEvents());
+      game = repo.hydrate('123');
+      claimSquareCommand = new ClaimSquareCommand('John', [0, 1]);
+      assert.throws(() => game.handleClaimSquare(claimSquareCommand), NotPlayersTurnError); 
     })
   })
 })

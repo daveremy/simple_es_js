@@ -1,5 +1,5 @@
 'use strict'
-let { RequiredFieldError } = require('./errors');
+let { RequiredFieldError, NotPlayersTurnError } = require('./errors');
 
 class Game {
 
@@ -26,10 +26,13 @@ class Game {
     return this;
   }
 
-  handleClaimSquare(claimSquare) {
-    this.checkRequired([['player', claimSquare.player],
-                        ['square', claimSquare.square]]);
-    var squareClaimed = new SquareClaimed(claimSquare.player, claimSquare.square);
+  handleClaimSquare(claimSquareCommand) {
+    this.checkRequired([['player', claimSquareCommand.player],
+                        ['square', claimSquareCommand.square]]);
+    if (claimSquareCommand.player != this.nextPlayer) {
+      throw new NotPlayersTurnError(claimSquareCommand.player);
+    }
+    var squareClaimed = new SquareClaimed(claimSquareCommand.player, claimSquareCommand.square);
     this.registerEvent(squareClaimed);
     return this;
   }
