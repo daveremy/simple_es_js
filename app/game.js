@@ -4,14 +4,14 @@ let { RequiredFieldError } = require('./errors');
 class Game {
 
   constructor() {
-    this._events = [];
+    this.events = [];
   }
 
   registerEvent(e) {
     // Call local 'apply' event method
     this['apply' + e.constructor.name](e);
     // Push the event to list of events created for this command
-    this._events.push(e);
+    this.events.push(e);
   }
 
   // Command Handlers -------------------
@@ -26,8 +26,12 @@ class Game {
     return this;
   }
 
-  placeXorO(placeXorOCommand) {
-    //
+  handleClaimSquare(claimSquare) {
+    this.checkRequired([['player', claimSquare.player],
+                        ['square', claimSquare.square]]);
+    var squareClaimed = new SquareClaimed(claimSquare.player, claimSquare.square);
+    this.registerEvent(squareClaimed);
+    return this;
   }
   // End Command Handlers --------------
 
@@ -35,17 +39,28 @@ class Game {
   // Note these methods will be called for rehydration as well
   //  internally (see registerEvent(e)) to set state.
   applyGameCreated(gameCreated) {
-    this._game_board = [ [], [], [] ];
-    this._xplayer = gameCreated.xplayer;
-    this._oplayer = gameCreated.oplayer;
+    this.gameBoard = [ [], [], [] ];
+    this.xplayer = gameCreated.xplayer;
+    this.oplayer = gameCreated.oplayer;
     // x goes first
-    this._next_player = gameCreated.xplayer;
+    this.nextPlayer = gameCreated.xplayer;
+  }
+
+  applySquareClaimed(squareClaimed) {
+    var char;
+    if (squareClaimed.player = this.xplayer) {
+      char = 'X';   
+      this.nextPlayer = this.oplayer;
+    } else {
+      char = 'O';
+      this.nextPlayer = this.xplayer;
+    }
+    this.gameBoard[squareClaimed.square[0], squareClaimed.square[1]] = char;
   }
   // End Event Handlers ==================
     
-  // helper to see events, todo: remove
-  getEvents() {
-    return this._events;
+  getUncommittedEvents() {
+    return this.events;
   };
   
   checkRequired(fields) {
@@ -62,6 +77,13 @@ class GameCreated {
     this.id = id;
     this.xplayer = xplayer;
     this.oplayer = oplayer;
+  }
+}
+
+class SquareClaimed {
+  constructor(player, square) {
+    this.player = player;
+    this.square = square;
   }
 }
 

@@ -1,31 +1,39 @@
-'use strict' 
+let Game = require('../app/game.js');
+
 class Repository {
-  constructor(console) {
-    this._repo = {};
-    this._console = console;
+  constructor() {
+    this.repo = {};
   }
 
   pushEvents(id, events) {
-    if (!(id in this._repo)) {
-      this._repo[id] = []
+    if (!id) throw new Error("required parameter id not provided");
+    if (!events) throw new Error("required parameter events not provided");
+    if (!(id in this.repo)) {
+      this.repo[id] = []
     }; 
 
     for (let event of events) {
-      this._repo[id].push(event);
+      this.repo[id].push(event);
     }
   }
 
   getEvents(id) {
-    return this._repo[id];
+    if (!id) throw new Error("required parameter id not provided");
+    return this.repo[id];
   }
 }
 
 class GameRepository extends Repository {
   hydrate(id) {
     var game = new Game();
-    for (var event of this._repo[id]) {
+    // check whether there any events yet for this game
+    //  if not then just return (game is being created)
+    if (!(id in this.repo)) {
+      return game;
+    }
+    for (var event of this.repo[id]) {
       // apply each event in history
-      game['apply' + event.constructor.name]();
+      game['apply' + event.constructor.name](event);
     }
     return game;
   }

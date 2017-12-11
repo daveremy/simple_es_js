@@ -1,14 +1,25 @@
-let assert =  require('assert');
+let assert = require('assert');
 let Game = require('../app/game.js');
-let { RequiredFieldError } = require('../app/errors');
+let {RequiredFieldError} = require('../app/errors');
+let CreateGameCommand = require('../app/commands/createGame');
+let ClaimSquareCommand = require('../app/commands/claimSquare');
+let CommandHandler = require('../app/commandHandler');
+let GameRepository = require('../app/repository');
 
-describe('Game', function() {
-  describe('CreateGame', function() {
-    it('should result in a GameCreatedEvent with correct id', function() {
-      let createGameCommand = require('../app/commands/createGame.js');
-      createGame = new createGameCommand('123', 'John', 'Jane');
+describe('Game', () => {
+  describe('CommandHandler', () => {
+    it('should dispatch a command', () => {
+      let repo = new GameRepository();
+      let commandHandler = new CommandHandler(repo);
+      commandHandler.handle(new CreateGameCommand('123', 'John', 'Jane'));
+      assert.equal(1, repo.getEvents('123').length);
+    })
+  }),
+  describe('CreateGame', () => {
+    it('should result in a GameCreatedEvent with correct id', function () {
+      let createGame = new CreateGameCommand('123', 'John', 'Jane');
       let game = new Game().handleCreateGame(createGame);
-      let resultEvents = game.getEvents();
+      let resultEvents = game.getUncommittedEvents();
       assert.equal(1, resultEvents.length);
       let event = resultEvents[0];
       assert.equal('GameCreated', event.constructor.name);
@@ -17,22 +28,37 @@ describe('Game', function() {
       assert.equal(createGame.oplayer, event.oplayer);
     })
     it('should fail if gameid not provided', () => {
-      let createGameCommand = require('../app/commands/createGame');
-      var createGame = new createGameCommand('', 'John', 'Jane');
-      assert.throws(() => new Game().handleCreateGame(createGame), RequiredFieldError );
-      createGame = new createGameCommand();
-      assert.throws(() => new Game().handleCreateGame(createGame), RequiredFieldError );
+      var createGame = new CreateGameCommand('', 'John', 'Jane');
+      assert.throws(() => new Game().handleCreateGame(createGame), RequiredFieldError);
+      createGame = new CreateGameCommand();
+      assert.throws(() => new Game().handleCreateGame(createGame), RequiredFieldError);
     })
     it('should fail if x or o player not provided', () => {
-      let createGameCommand = require('../app/commands/createGame');
-      var createGame = new createGameCommand('123', '', 'Jane');
-      assert.throws(() => new Game().handleCreateGame(createGame), RequiredFieldError );
-      createGame = new createGameCommand('123');
-      assert.throws(() => new Game().handleCreateGame(createGame), RequiredFieldError );
-      createGame = new createGameCommand('123', 'John', '');
-      assert.throws(() => new Game().handleCreateGame(createGame), RequiredFieldError );
-      createGame = new createGameCommand('123', 'John');
-      assert.throws(() => new Game().handleCreateGame(createGame), RequiredFieldError );
+      var createGame = new CreateGameCommand('123', '', 'Jane');
+      assert.throws(() => new Game().handleCreateGame(createGame), RequiredFieldError);
+      createGame = new CreateGameCommand('123');
+      assert.throws(() => new Game().handleCreateGame(createGame), RequiredFieldError);
+      createGame = new CreateGameCommand('123', 'John', '');
+      assert.throws(() => new Game().handleCreateGame(createGame), RequiredFieldError);
+      createGame = new CreateGameCommand('123', 'John');
+      assert.throws(() => new Game().handleCreateGame(createGame), RequiredFieldError);
+    })
+  }),
+  describe('ClaimSquare', () => {
+    it('should allow xplayer move', () => {
+      let repo = new GameRepository();
+      var game = new Game().handleCreateGame(new CreateGameCommand('123', 'John', 'Jane'));
+      repo.pushEvents('123', game.getUncommittedEvents());
+      game = repo.hydrate('123');
+      let claimSquareCommand = new ClaimSquareCommand('John', [0, 0]);
+      game.handleClaimSquare(claimSquareCommand);
+      assert.equal(1, game.getUncommittedEvents().length);
+      let event = game.getUncommittedEvents()[0];
+      assert.equal('SquareClaimed', event.constructor.name);
+      assert.equal(claimSquareCommand.player, event.player);
+      assert.equal(claimSquareCommand.square, event.square);
     })
   })
 })
+
+// TODO:  Add negative tests for claim square
