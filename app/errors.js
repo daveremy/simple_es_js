@@ -17,8 +17,15 @@ class SquareAlreadyClaimedError extends Error {
   }
 }
 
+class InvalidSquareError extends Error {
+  constructor(squareParameters) {
+    super("Invalid square requested, either not a number or outside game board boundaries (0,0 - 3,3). Received " + squareParameters[0] + "," + squareParameters[1] + ".");
+  }
+}
+
 module.exports = {
   RequiredFieldError : RequiredFieldError,
   NotPlayersTurnError : NotPlayersTurnError,
-  SquareAlreadyClaimedError : SquareAlreadyClaimedError
+  SquareAlreadyClaimedError : SquareAlreadyClaimedError,
+  InvalidSquareError: InvalidSquareError
 }

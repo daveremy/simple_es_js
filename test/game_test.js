@@ -1,10 +1,10 @@
 let assert = require('assert');
 let Game = require('../app/game.js');
-let { RequiredFieldError, NotPlayersTurnError, SquareAlreadyClaimedError } = require('../app/errors');
 let CreateGameCommand = require('../app/commands/createGame');
 let ClaimSquareCommand = require('../app/commands/claimSquare');
 let CommandHandler = require('../app/commandHandler');
 let GameRepository = require('../app/repository');
+let { RequiredFieldError, NotPlayersTurnError, SquareAlreadyClaimedError, InvalidSquareError } = require('../app/errors');
 
 describe('Game', () => {
   describe('CommandHandler', () => {
@@ -81,6 +81,14 @@ describe('Game', () => {
       game = repo.hydrate('123');
       claimSquareCommand = new ClaimSquareCommand('Jane', [0, 0]);
       assert.throws(() => game.handleClaimSquare(claimSquareCommand), SquareAlreadyClaimedError); 
+    })
+    it('should not allow claiming an invalid square', () => {
+      let repo = new GameRepository();
+      var game = new Game().handleCreateGame(new CreateGameCommand('123', 'John', 'Jane'));
+      repo.pushEvents('123', game.getUncommittedEvents());
+      game = repo.hydrate('123');
+      var claimSquareCommand = new ClaimSquareCommand('John', [0, 7]);
+      assert.throws(() => game.handleClaimSquare(claimSquareCommand), InvalidSquareError); 
     })
   })
 })

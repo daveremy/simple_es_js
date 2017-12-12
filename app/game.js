@@ -1,5 +1,5 @@
 'use strict'
-let { RequiredFieldError, NotPlayersTurnError, SquareAlreadyClaimedError } = require('./errors');
+let { RequiredFieldError, NotPlayersTurnError, SquareAlreadyClaimedError, InvalidSquareError } = require('./errors');
 
 class Game {
 
@@ -33,8 +33,13 @@ class Game {
     if (claimSquare.player != this.nextPlayer) {
       throw new NotPlayersTurnError(claimSquare.player);
     }
-    // assure this square isn't already claimed
+    // check that input square values are valid
+    if (!(this.isValidSquare(claimSquare.square[0]) && this.isValidSquare(claimSquare.square[1]))) {
+      throw new InvalidSquareError(claimSquare.square); 
+    }
+    // assure square is a valid square on the game board
     let claimedSquare = this.gameBoard[claimSquare.square[0]][claimSquare.square[1]];
+    // assure this square isn't already claimed
     if (!(claimedSquare === "Unclaimed")) {
       throw new SquareAlreadyClaimedError(claimSquare.square);
     }
@@ -69,7 +74,10 @@ class Game {
     this.gameBoard[squareClaimed.square[0], squareClaimed.square[1]] = char;
   }
   // End Event Handlers ==================
-    
+  isValidSquare(index) {
+    return Number.isInteger(index) && index >= 0 && index < 3;
+  }
+
   getUncommittedEvents() {
     return this.events;
   };
