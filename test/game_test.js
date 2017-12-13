@@ -4,7 +4,8 @@ let CreateGameCommand = require('../app/commands/createGame');
 let ClaimSquareCommand = require('../app/commands/claimSquare');
 let CommandHandler = require('../app/commandHandler');
 let GameRepository = require('../app/repository');
-let { RequiredFieldError, NotPlayersTurnError, SquareAlreadyClaimedError, InvalidSquareError } = require('../app/errors');
+let { RequiredFieldError, InvalidPlayerError, NotPlayersTurnError, SquareAlreadyClaimedError,
+      InvalidSquareError } = require('../app/errors');
 
 describe('Game', () => {
   describe('CommandHandler', () => {
@@ -57,6 +58,15 @@ describe('Game', () => {
       assert.equal('SquareClaimed', event.constructor.name);
       assert.equal(claimSquareCommand.player, event.player);
       assert.equal(claimSquareCommand.square, event.square);
+    })
+    it('should not allow invalid player', () => {
+      let repo = new GameRepository();
+      var game = new Game().handleCreateGame(new CreateGameCommand('123', 'John', 'Jane'));
+      repo.pushEvents('123', game.getUncommittedEvents());
+      game = repo.hydrate('123');
+      // provide new player  as player making move
+      var claimSquareCommand = new ClaimSquareCommand('Joe', [0, 0]);
+      assert.throws(() => game.handleClaimSquare(claimSquareCommand), InvalidPlayerError); 
     })
     it('should not allow John two consecutive turns', () => {
       let repo = new GameRepository();

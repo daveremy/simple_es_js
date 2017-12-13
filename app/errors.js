@@ -5,6 +5,12 @@ class RequiredFieldError extends Error {
   }
 }
 
+class InvalidPlayerError extends Error {
+  constructor(player) {
+    super("Invalid Player.  Player either missing or not one of the initial players.  Player provided: " + player + ".");
+  }
+}
+
 class NotPlayersTurnError extends Error {
   constructor(player) {
     super("Player: " + player + " attempted to move when not that player's turn");
@@ -25,6 +31,7 @@ class InvalidSquareError extends Error {
 
 module.exports = {
   RequiredFieldError : RequiredFieldError,
+  InvalidPlayerError : InvalidPlayerError,
   NotPlayersTurnError : NotPlayersTurnError,
   SquareAlreadyClaimedError : SquareAlreadyClaimedError,
   InvalidSquareError: InvalidSquareError

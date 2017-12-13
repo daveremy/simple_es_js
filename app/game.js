@@ -1,11 +1,95 @@
 'use strict'
-let { RequiredFieldError, NotPlayersTurnError, SquareAlreadyClaimedError, InvalidSquareError } = require('./errors');
+let {RequiredFieldError, InvalidPlayerError, NotPlayersTurnError, SquareAlreadyClaimedError, InvalidSquareError} = require('./errors');
 
 class Game {
 
   constructor() {
     this.events = [];
   }
+
+  // Command Handlers -------------------
+  // Command Handler methods start with "handle"
+  handleCreateGame(createGameCommand) {
+    this.checkRequired([
+      ['id', createGameCommand.id],
+      ['xplayer', createGameCommand.xplayer],
+      ['oplayer', createGameCommand.oplayer]
+    ]);
+    var gameCreatedEvent = new GameCreated(createGameCommand.id, createGameCommand.xplayer, createGameCommand.oplayer);
+    this.registerEvent(gameCreatedEvent);
+    return this;
+  }
+
+  handleClaimSquare(claimSquareCommand) {
+    this.checkRequired([
+      ['player', claimSquareCommand.player],
+      ['square', claimSquareCommand.square]
+    ]);
+    this.validateSquare(claimSquareCommand);
+    var squareClaimedEvent = new SquareClaimed(claimSquareCommand.player, claimSquareCommand.square);
+    this.registerEvent(squareClaimedEvent);
+    return this;
+  }
+
+  validateSquare(claimSquareCommand) {
+    // assure there is player and it is one of the two original
+    if (!(claimSquareCommand.player && [this.xplayer, this.oplayer].indexOf(claimSquareCommand.player) >= 0)) {
+      throw new InvalidPlayerError(claimSquareCommand.player);
+    }
+    // assure this is the correct next player
+    if (claimSquareCommand.player != this.nextPlayer) {
+      throw new NotPlayersTurnError(claimSquareCommand.player);
+    }
+    // check that input square values are valid
+    if (!(this.isValidSquare(claimSquareCommand.square[0]) && this.isValidSquare(claimSquareCommand.square[1]))) {
+      throw new InvalidSquareError(claimSquareCommand.square);
+    }
+    // assure square is a valid square on the game board
+    let claimedSquare = this.gameBoard[claimSquareCommand.square[0]][claimSquareCommand.square[1]];
+    // assure this square isn't already claimed
+    if (!(claimedSquare == 0)) {
+      throw new SquareAlreadyClaimedError(claimSquareCommand.square);
+    }
+  }
+
+  // Event Handlers --------------------
+  // Note: these methods will be called for rehydration as well as internally (see
+  // registerEvent(e)) to set state.
+  // Event Handler methods start with "apply"
+  applyGameCreated(gameCreated) {
+    this.gameBoard = [
+      [ 0, 0, 0 ],
+      [ 0, 0, 0 ],
+      [ 0, 0, 0 ]
+    ];
+    this.xplayer = gameCreated.xplayer;
+    this.oplayer = gameCreated.oplayer;
+    // x goes first
+    this.nextPlayer = gameCreated.xplayer;
+  }
+
+  applySquareClaimed(squareClaimed) {
+    var squareValue;
+    // X = 1, O = -1 (this will help calc winner later)
+    if (squareClaimed.player = this.xplayer) {
+      squareValue = 1;
+      this.nextPlayer = this.oplayer;
+    } else {
+      squareValue = -1;
+      this.nextPlayer = this.xplayer;
+    }
+    this.gameBoard[squareClaimed.square[0]][squareClaimed.square[1]] = squareValue;
+    let winner = this.gameFinished();
+    if (winner) {
+      // fire game finished event
+      let draw = winner == "";
+      var gameFinishedEvent = new GameFinished(draw, winner);
+      this.registerEvent(gameFinishedEvent);
+      this.gameFinished = true;
+    }
+  }
+  
+  // Aggregate utility functions =============================
 
   registerEvent(e) {
     // Call local 'apply' event method
@@ -14,73 +98,15 @@ class Game {
     this.events.push(e);
   }
 
-  // Command Handlers -------------------
-  handleCreateGame(createGame) {
-    this.checkRequired([['id', createGame.id],
-                        ['xplayer', createGame.xplayer],
-                        ['oplayer', createGame.oplayer]]);
-    var gameCreated = new GameCreated(createGame.id,
-                                      createGame.xplayer,
-                                      createGame.oplayer);
-    this.registerEvent(gameCreated);
-    return this;
+  getUncommittedEvents() {
+    return this.events;
   }
 
-  handleClaimSquare(claimSquare) {
-    this.checkRequired([['player', claimSquare.player],
-                        ['square', claimSquare.square]]);
-    // assure this is the correct next  player
-    if (claimSquare.player != this.nextPlayer) {
-      throw new NotPlayersTurnError(claimSquare.player);
-    }
-    // check that input square values are valid
-    if (!(this.isValidSquare(claimSquare.square[0]) && this.isValidSquare(claimSquare.square[1]))) {
-      throw new InvalidSquareError(claimSquare.square); 
-    }
-    // assure square is a valid square on the game board
-    let claimedSquare = this.gameBoard[claimSquare.square[0]][claimSquare.square[1]];
-    // assure this square isn't already claimed
-    if (!(claimedSquare === "Unclaimed")) {
-      throw new SquareAlreadyClaimedError(claimSquare.square);
-    }
-    var squareClaimed = new SquareClaimed(claimSquare.player, claimSquare.square);
-    this.registerEvent(squareClaimed);
-    return this;
-  }
-  // End Command Handlers --------------
-
-  // Event Handlers --------------------
-  // Note these methods will be called for rehydration as well
-  //  internally (see registerEvent(e)) to set state.
-  applyGameCreated(gameCreated) {
-    this.gameBoard = [ ["Unclaimed", "Unclaimed", "Unclaimed"],
-                       ["Unclaimed", "Unclaimed", "Unclaimed"],
-                       ["Unclaimed", "Unclaimed", "Unclaimed"] ];
-    this.xplayer = gameCreated.xplayer;
-    this.oplayer = gameCreated.oplayer;
-    // x goes first
-    this.nextPlayer = gameCreated.xplayer;
-  }
-
-  applySquareClaimed(squareClaimed) {
-    var char;
-    if (squareClaimed.player = this.xplayer) {
-      char = 'X';   
-      this.nextPlayer = this.oplayer;
-    } else {
-      char = 'O';
-      this.nextPlayer = this.xplayer;
-    }
-    this.gameBoard[squareClaimed.square[0], squareClaimed.square[1]] = char;
-  }
-  // End Event Handlers ==================
+  // Helper functions ==========================================
+  
   isValidSquare(index) {
     return Number.isInteger(index) && index >= 0 && index < 3;
   }
-
-  getUncommittedEvents() {
-    return this.events;
-  };
   
   checkRequired(fields) {
     for (var field of fields) {
@@ -89,6 +115,51 @@ class Game {
       }
     }
   };
+  
+  gameFinished() {
+    let winner = this.gameIsWon(this.gameBoard);
+    if (winner) return winner == 1 ? xplayer : oplayer;
+    if (this.gameIsDraw(this.gameBoard)) return "";
+    return false;
+  }
+
+  gameIsWon(gb) {
+    // iterate through each axis (row, columns, diags) and
+    //  check whether it adds up to 3 (X won) or -3 (O won)
+    for (let a of this.axes(gb)) {
+      let sum = a.reduce((sum, x) => sum + x);
+      if (sum == 3) {
+        return 1;
+      } else if (sum == -3) {
+        return -1;
+      }
+    }
+    return false;
+  }
+
+  gameIsDraw(gb) {
+    return !gb.reduce((prev, curr) => prev.concat(curr)).includes(0);
+  }
+
+  // Return the different axis as an iterable to check for 3 in a row
+  * axes(gb) {
+    // rows
+    for (let i = 0; i < gb.length; i++) {
+    yield gb[i]
+    }
+    // columns
+    for (let i = 0; i < gb.length; i++) {
+      var column = [];
+      for (let j = 0; j < gb.length; j++) {
+        column.push(gb[j][i]);
+      }
+      yield column;
+    }
+    // forward diagonal
+    yield[gb[0][0], gb[1][1], gb[2][2]];
+    // reverse diagonal
+    yield[gb[0][2], gb[1][1], gb[2][0]];
+  }
 };
 
 class GameCreated {
@@ -103,6 +174,13 @@ class SquareClaimed {
   constructor(player, square) {
     this.player = player;
     this.square = square;
+  }
+}
+
+class GameFinished {
+  constructor(draw, winner) {
+    this.draw = draw;
+    this.winner = winner;
   }
 }
 
