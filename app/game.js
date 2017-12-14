@@ -28,9 +28,18 @@ class Game {
     this.validateSquare(claimSquareCommand);
     var squareClaimedEvent = new SquareClaimed(claimSquareCommand.player, claimSquareCommand.square);
     this.registerEvent(squareClaimedEvent);
+    // check whether the game has finished
+    // work on copy of gameBoard (command handlers don't change state)
+    let gameBoard = [...this.gameBoard];
+    gameBoard[claimSquareCommand.square[0]][claimSquareCommand.square[1]] = (claimSquareCommand.player == this.xplayer ? 1 : -1);
+    let winner = this.gameFinished(gameBoard);
+    if (winner) {
+      var gameFinishedEvent = new GameFinished(winner);
+      this.registerEvent(gameFinishedEvent);
+    }
     return this;
   }
-
+  
   validateSquare(claimSquareCommand) {
     // assure there is player and it is one of the two original
     if (!(claimSquareCommand.player && [this.xplayer, this.oplayer].indexOf(claimSquareCommand.player) >= 0)) {
@@ -79,21 +88,20 @@ class Game {
       this.nextPlayer = this.xplayer;
     }
     this.gameBoard[squareClaimed.square[0]][squareClaimed.square[1]] = squareValue;
-    let winner = this.gameFinished();
-    if (winner) {
-      // fire game finished event
-      let draw = winner == "";
-      var gameFinishedEvent = new GameFinished(draw, winner);
-      this.registerEvent(gameFinishedEvent);
-      this.gameFinished = true;
-    }
+ }
+
+ // TODO: Put in invariant to assure can't claim square if the game is finished.
+  applyGameFinished(gameFinishedEvent) {
+    this.gameFinished = true;
   }
   
   // Aggregate utility functions =============================
 
   registerEvent(e) {
-    // Call local 'apply' event method
-    this['apply' + e.constructor.name](e);
+    // Call local 'apply' event method if it is defined
+    if (this['apply' + e.constructor.name]) {
+      this['apply' + e.constructor.name](e);
+    }
     // Push the event to list of events created for this command
     this.events.push(e);
   }
@@ -116,11 +124,15 @@ class Game {
     }
   };
   
-  gameFinished() {
-    let winner = this.gameIsWon(this.gameBoard);
-    if (winner) return winner == 1 ? xplayer : oplayer;
-    if (this.gameIsDraw(this.gameBoard)) return "";
-    return false;
+  gameFinished(gameBoard) {
+    var result;
+    let winner = this.gameIsWon(gameBoard);
+    if (winner) {
+      result = (winner == 1 ? xplayer : oplayer);
+    } else if (this.gameIsDraw(gameBoard)) {
+      result = "";
+    }
+    return result;
   }
 
   gameIsWon(gb) {
@@ -178,8 +190,7 @@ class SquareClaimed {
 }
 
 class GameFinished {
-  constructor(draw, winner) {
-    this.draw = draw;
+  constructor(winner) {
     this.winner = winner;
   }
 }
